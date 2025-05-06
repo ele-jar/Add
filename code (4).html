@@ -1,0 +1,678 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image Tagger V2.2</title>
+    <style>
+        *, *::before, *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+            line-height: 1.6;
+            background-color: #f8f9fa;
+            color: #343a40;
+            padding: 1rem;
+            transition: background-color 0.3s ease;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 2rem auto;
+            padding: 1.5rem 2rem;
+            background-color: #ffffff;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            overflow: hidden;
+        }
+
+        h1, h2 {
+            color: #212529;
+            margin-bottom: 1rem;
+            font-weight: 600;
+        }
+        h1 {
+            text-align: center;
+            margin-bottom: 2rem;
+            font-size: 2rem;
+        }
+        h2 {
+            font-size: 1.5rem;
+            border-bottom: 1px solid #dee2e6;
+            padding-bottom: 0.5rem;
+            margin-top: 1.5rem;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+            color: #495057;
+        }
+
+        textarea, input[type="text"] {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border: 1px solid #ced4da;
+            border-radius: 8px;
+            font-size: 1rem;
+            line-height: 1.5;
+            background-color: #f1f3f5;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        textarea:focus, input[type="text"]:focus {
+            outline: none;
+            border-color: #80bdff;
+            box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+        }
+
+        textarea {
+            min-height: 120px;
+            resize: vertical;
+        }
+
+        button {
+            display: inline-block;
+            padding: 0.75rem 1.5rem;
+            font-size: 1rem;
+            font-weight: 500;
+            color: #fff;
+            background-color: #007bff;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.2s ease, transform 0.1s ease;
+            margin: 0.5rem 0.5rem 0.5rem 0;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        button:active {
+            transform: translateY(1px);
+        }
+
+        button.secondary {
+            background-color: #6c757d;
+        }
+        button.secondary:hover {
+            background-color: #5a6268;
+        }
+
+        button.danger {
+            background-color: #dc3545;
+        }
+        button.danger:hover {
+            background-color: #c82333;
+        }
+
+        button:disabled {
+            background-color: #adb5bd;
+            cursor: not-allowed;
+        }
+
+        #imageList {
+            margin-top: 2rem;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .image-entry {
+            background-color: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 10px;
+            padding: 1rem;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+            display: flex;
+            flex-direction: column;
+            transition: box-shadow 0.2s ease;
+        }
+
+        .image-entry:hover {
+             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        }
+
+        .image-preview-container {
+            width: 100%;
+            background-color: #e9ecef;
+            border-radius: 8px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            margin-bottom: 1rem;
+            min-height: 200px;
+            position: relative;
+        }
+
+        .image-preview {
+            display: block;
+            max-width: 100%;
+            max-height: 400px;
+            height: auto;
+            object-fit: contain;
+            border-radius: 8px;
+            opacity: 0;
+            transition: opacity 0.5s ease;
+        }
+        .image-preview.loaded {
+             opacity: 1;
+        }
+        .image-preview.error {
+            display: none;
+        }
+
+        .image-error-message {
+            font-size: 0.9rem;
+            color: #dc3545;
+            text-align: center;
+            display: none;
+            padding: 1rem;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+        .image-preview-container.has-error .image-error-message {
+            display: block;
+        }
+
+        .image-details-header {
+             display: flex;
+             align-items: center;
+             margin-bottom: 0.75rem;
+             gap: 0.5rem;
+        }
+
+        .image-number {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #6c757d;
+        }
+
+        .image-details {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            flex-grow: 1;
+        }
+
+        .image-details input[type="text"] {
+            font-size: 0.9rem;
+            padding: 0.5rem 0.75rem;
+        }
+
+        .image-tag-suggestions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+            padding: 0.5rem 0;
+            min-height: 20px;
+            border-top: 1px dashed #ced4da;
+            margin-top: 1rem;
+            padding-top: 0.75rem;
+        }
+
+        .tag-suggestion {
+            background-color: #e2e6ea;
+            color: #495057;
+            padding: 0.25rem 0.75rem;
+            border-radius: 15px;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: background-color 0.2s ease, color 0.2s ease;
+            user-select: none;
+        }
+
+        .tag-suggestion:hover {
+            background-color: #007bff;
+            color: #fff;
+        }
+
+        .tag-input-area {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+            margin-top: 1.5rem;
+            margin-bottom: 0.5rem;
+        }
+        .tag-input-area input[type="text"] {
+           flex-grow: 1;
+        }
+        .tag-input-area button {
+            margin: 0;
+            flex-shrink: 0;
+            padding: 0.75rem 1rem;
+        }
+
+        #jsonOutputContainer {
+            margin-top: 2rem;
+        }
+        #jsonOutput {
+            background-color: #212529;
+            color: #f8f9fa;
+            padding: 1rem;
+            border-radius: 8px;
+            max-height: 300px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier, monospace;
+            font-size: 0.9rem;
+            margin-top: 0.5rem;
+            border: 1px solid #495057;
+        }
+
+        .action-buttons {
+            margin-top: 2rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid #dee2e6;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+            justify-content: center;
+        }
+
+        .hidden { display: none; }
+        .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border-width: 0; }
+
+        @media (max-width: 768px) {
+            .container { margin: 1rem auto; padding: 1rem; }
+            h1 { font-size: 1.75rem; margin-bottom: 1.5rem; }
+            h2 { font-size: 1.25rem; }
+            #imageList { grid-template-columns: 1fr; gap: 1rem; }
+            .image-preview-container { min-height: 150px; }
+            .image-preview { max-height: 300px; }
+            .action-buttons { flex-direction: column; align-items: stretch; }
+            .action-buttons button { width: 100%; margin: 0.25rem 0; }
+            .tag-input-area { flex-direction: column; align-items: stretch; }
+            .tag-input-area button { margin-top: 0.5rem; }
+        }
+        @media (max-width: 480px) {
+             body { padding: 0.5rem; }
+             .container { margin: 0.5rem auto; border-radius: 8px; }
+             textarea, input[type="text"], button { font-size: 0.95rem; padding: 0.6rem 0.8rem; }
+             textarea { min-height: 100px;}
+             .image-preview-container { min-height: 120px; }
+             .image-preview { max-height: 250px; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>Image Tagger V2.2</h1>
+
+        <section>
+            <h2>1. Paste Image URLs</h2>
+            <label for="imageUrlsInput">Enter image URLs (one per line):</label>
+            <textarea id="imageUrlsInput" placeholder="https://example.com/image1.jpg&#10;https://example.com/image2.png"></textarea>
+            <button id="processUrlsBtn">Load Images</button>
+        </section>
+
+        <section>
+            <h2>2. Tag Your Images</h2>
+            <div id="imageList">
+                <p style="grid-column: 1 / -1;">No images loaded yet. Paste URLs above and click "Load Images".</p>
+            </div>
+        </section>
+
+        <section>
+            <h2>3. Add Tag Suggestions</h2>
+            <label for="newTagInput">Add a new global tag suggestion:</label>
+            <div class="tag-input-area">
+                <input type="text" id="newTagInput" placeholder="e.g., funny, nature, code">
+                <button id="addTagBtn">Add Suggestion</button>
+            </div>
+             <p style="font-size: 0.9em; color: #6c757d;">Suggestions will appear below the 'Tags' input for each image.</p>
+        </section>
+
+        <section id="jsonOutputContainer">
+            <h2>4. Generated Data Preview</h2>
+             <p style="font-size: 0.9em; color: #6c757d;">Preview shows standard JSON array. 'Copy Data' button copies the comma-separated object format.</p>
+             <div id="jsonOutput"><pre><code>JSON output will appear here...</code></pre></div>
+        </section>
+
+        <div class="action-buttons">
+            <button id="generateJsonBtn">Generate/Update Preview</button>
+            <button id="copyJsonBtn" class="secondary" disabled>Copy Data (Comma Separated)</button>
+            <button id="clearAllBtn" class="danger">Clear All Entries</button>
+        </div>
+
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const imageUrlsInput = document.getElementById('imageUrlsInput');
+            const processUrlsBtn = document.getElementById('processUrlsBtn');
+            const imageListDiv = document.getElementById('imageList');
+            const newTagInput = document.getElementById('newTagInput');
+            const addTagBtn = document.getElementById('addTagBtn');
+            const generateJsonBtn = document.getElementById('generateJsonBtn');
+            const copyJsonBtn = document.getElementById('copyJsonBtn');
+            const clearAllBtn = document.getElementById('clearAllBtn');
+            const jsonOutputCode = document.getElementById('jsonOutput').querySelector('code');
+
+            let imageData = [];
+            let tagSuggestions = [];
+            let nextId = 1;
+
+            const IMAGE_DATA_LS_KEY = 'imageData_v2';
+            const TAG_SUGGESTIONS_LS_KEY = 'tagSuggestions_v2';
+            const NEXT_ID_LS_KEY = 'nextImageId_v2';
+
+            function isValidUrl(string) {
+                try {
+                    const url = new URL(string);
+                    return ['http:', 'https:'].includes(url.protocol);
+                } catch (_) { return false; }
+            }
+
+            function escapeHtml(unsafe) {
+                 if (typeof unsafe !== 'string') return unsafe;
+                 return unsafe.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+            }
+
+            function saveToLocalStorage() {
+                try {
+                    localStorage.setItem(IMAGE_DATA_LS_KEY, JSON.stringify(imageData));
+                    localStorage.setItem(TAG_SUGGESTIONS_LS_KEY, JSON.stringify(tagSuggestions));
+                    localStorage.setItem(NEXT_ID_LS_KEY, nextId.toString());
+                } catch (e) {
+                    console.error("Error saving to local storage:", e);
+                     alert("Could not save data to local storage. It might be full or disabled.");
+                }
+            }
+
+            function loadFromLocalStorage() {
+                const savedImageData = localStorage.getItem(IMAGE_DATA_LS_KEY);
+                const savedTagSuggestions = localStorage.getItem(TAG_SUGGESTIONS_LS_KEY);
+                const savedNextId = localStorage.getItem(NEXT_ID_LS_KEY);
+
+                if (savedImageData) {
+                    try {
+                        imageData = JSON.parse(savedImageData);
+                        if (!Array.isArray(imageData)) imageData = [];
+                        imageData.forEach(item => {
+                            if (!Array.isArray(item.tags)) item.tags = [];
+                            if (item.hasError === undefined) item.hasError = false;
+                            item.tags = item.tags.map(tag => String(tag).toLowerCase());
+                            if (item.id === undefined) item.id = nextId++;
+                        });
+                    } catch (e) { console.error("Error parsing image data:", e); imageData = []; }
+                }
+
+                if (savedTagSuggestions) {
+                     try {
+                        tagSuggestions = JSON.parse(savedTagSuggestions);
+                        if (!Array.isArray(tagSuggestions)) tagSuggestions = [];
+                        tagSuggestions = tagSuggestions.map(tag => String(tag).toLowerCase()).filter(Boolean);
+                        tagSuggestions.sort();
+                    } catch (e) { console.error("Error parsing tags:", e); tagSuggestions = []; }
+                }
+
+                if (savedNextId) {
+                    nextId = parseInt(savedNextId, 10);
+                     if (isNaN(nextId) || nextId < 1) nextId = 1;
+                }
+
+                 if (imageData.length > 0) {
+                    const maxId = Math.max(...imageData.map(item => item.id || 0), 0);
+                    nextId = Math.max(nextId, maxId + 1);
+                 }
+            }
+
+            function populateImageTagSuggestions(entryDiv) {
+                const suggestionsContainer = entryDiv.querySelector('.image-tag-suggestions');
+                if (!suggestionsContainer) return;
+
+                suggestionsContainer.innerHTML = '';
+                if (tagSuggestions.length === 0) {
+                     suggestionsContainer.innerHTML = '<span style="font-size: 0.8em; color: #6c757d;">No suggestions.</span>';
+                     return;
+                }
+
+                tagSuggestions.forEach(tag => {
+                    const tagEl = document.createElement('span');
+                    tagEl.classList.add('tag-suggestion');
+                    tagEl.textContent = tag;
+                    tagEl.dataset.tag = tag;
+                    suggestionsContainer.appendChild(tagEl);
+                });
+            }
+
+            function renderImageList() {
+                const initialMessage = imageListDiv.querySelector('p');
+                imageListDiv.innerHTML = '';
+                if (initialMessage) {
+                    imageListDiv.appendChild(initialMessage);
+                }
+
+                if (imageData.length === 0) {
+                     if (initialMessage) initialMessage.style.display = 'block';
+                    return;
+                } else {
+                     if (initialMessage) initialMessage.style.display = 'none';
+                }
+
+                imageData.forEach((item, index) => {
+                    const entryDiv = document.createElement('div');
+                    entryDiv.classList.add('image-entry');
+                    entryDiv.dataset.id = item.id;
+
+                    entryDiv.innerHTML = `
+                        <div class="image-preview-container ${item.hasError ? 'has-error' : ''}">
+                            <img src="${item.url}" alt="Preview ${index + 1}" class="image-preview" loading="lazy">
+                            <span class="image-error-message">Image not found or invalid URL</span>
+                        </div>
+                        <div class="image-details">
+                             <div class="image-details-header">
+                                <span class="image-number">${index + 1}.</span>
+                                <label for="name-${item.id}" class="sr-only">Name for image ${index + 1}:</label>
+                                <input type="text" id="name-${item.id}" data-field="name" value="${escapeHtml(item.name)}" placeholder="Custom Name">
+                             </div>
+                            <label for="tags-${item.id}" class="sr-only">Tags for image ${index + 1}:</label>
+                            <input type="text" id="tags-${item.id}" data-field="tags" value="${item.tags.join(', ')}" placeholder="Tags (comma-separated)">
+                            <div class="image-tag-suggestions"></div>
+                        </div>`;
+
+                    const img = entryDiv.querySelector('.image-preview');
+                    const previewContainer = entryDiv.querySelector('.image-preview-container');
+                    img.onload = () => { img.classList.add('loaded'); item.hasError = false; previewContainer.classList.remove('has-error'); };
+                    img.onerror = () => { img.classList.add('error'); previewContainer.classList.add('has-error'); item.hasError = true; };
+                    if (item.hasError) { img.classList.add('error'); previewContainer.classList.add('has-error'); }
+
+                    imageListDiv.appendChild(entryDiv);
+                    populateImageTagSuggestions(entryDiv);
+                });
+
+                 const finalInitialMessage = imageListDiv.querySelector('p');
+                 if (finalInitialMessage && imageData.length > 0) {
+                     finalInitialMessage.remove();
+                 }
+            }
+
+             function updateAllTagSuggestions() {
+                const allEntries = imageListDiv.querySelectorAll('.image-entry');
+                allEntries.forEach(populateImageTagSuggestions);
+            }
+
+            function handleImageInputChange(event) {
+                if (event.target.matches('input[type="text"]')) {
+                    const input = event.target;
+                    const entryDiv = input.closest('.image-entry');
+                    if (!entryDiv) return;
+
+                    const id = parseInt(entryDiv.dataset.id, 10);
+                    const field = input.dataset.field;
+                    const value = input.value;
+                    const itemIndex = imageData.findIndex(item => item.id === id);
+
+                    if (itemIndex > -1) {
+                        if (field === 'name') {
+                            imageData[itemIndex].name = value;
+                        } else if (field === 'tags') {
+                            imageData[itemIndex].tags = value.split(',')
+                                .map(tag => tag.trim().toLowerCase())
+                                .filter(tag => tag !== '');
+                        }
+                        saveToLocalStorage();
+                    }
+                }
+            }
+
+            function addTagSuggestion() {
+                const newTag = newTagInput.value.trim().toLowerCase();
+                if (newTag && !tagSuggestions.includes(newTag)) {
+                    tagSuggestions.push(newTag);
+                    tagSuggestions.sort();
+                    updateAllTagSuggestions();
+                    saveToLocalStorage();
+                }
+                newTagInput.value = '';
+            }
+
+             function handleSuggestionClick(event) {
+                if (event.target.classList.contains('tag-suggestion')) {
+                    const tagToAdd = event.target.dataset.tag;
+                    const entryDiv = event.target.closest('.image-entry');
+                    if (!entryDiv || !tagToAdd) return;
+
+                    const tagsInput = entryDiv.querySelector('input[data-field="tags"]');
+                    if (tagsInput) {
+                        const currentTags = tagsInput.value.split(',')
+                                                .map(t => t.trim())
+                                                .filter(t => t !== '');
+                        if (!currentTags.includes(tagToAdd)) {
+                             currentTags.push(tagToAdd);
+                             tagsInput.value = currentTags.join(', ');
+                             tagsInput.dispatchEvent(new Event('input', { bubbles: true }));
+                        }
+                        tagsInput.focus();
+                    }
+                }
+            }
+
+            function updateJsonOutput() {
+                if (imageData.length === 0) {
+                    jsonOutputCode.textContent = 'No image data yet.';
+                    copyJsonBtn.disabled = true;
+                    return;
+                }
+                const outputData = imageData.map(item => ({
+                    name: item.name || `Image_${item.id}`,
+                    url: item.url,
+                    tags: item.tags
+                }));
+                const jsonString = JSON.stringify(outputData, null, 2);
+                jsonOutputCode.textContent = jsonString;
+                copyJsonBtn.disabled = false;
+            }
+
+            function copyFormattedDataToClipboard() {
+                if (imageData.length === 0) {
+                    alert('Nothing to copy.');
+                    return;
+                }
+
+                const outputData = imageData.map(item => ({
+                    name: item.name || `Image_${item.id}`,
+                    url: item.url,
+                    tags: item.tags
+                }));
+
+                const formattedString = outputData
+                    .map(item => JSON.stringify(item, null, 2)) // Use pretty print (null, 2) for each object
+                    .join(',\n');
+
+                navigator.clipboard.writeText(formattedString)
+                    .then(() => {
+                        const originalText = copyJsonBtn.textContent;
+                        copyJsonBtn.textContent = 'Copied!';
+                        copyJsonBtn.disabled = true;
+                        setTimeout(() => {
+                            copyJsonBtn.textContent = originalText;
+                            copyJsonBtn.disabled = imageData.length === 0;
+                        }, 1500);
+                    })
+                    .catch(err => {
+                        console.error('Failed to copy data: ', err);
+                        let message = 'Failed to copy data to clipboard. See console for details.';
+                        if (err.name === 'NotAllowedError') {
+                            message = 'Clipboard permission denied. Please allow clipboard access.';
+                        } else if (!navigator.clipboard) {
+                             message = 'Clipboard API not available (try HTTPS/localhost).';
+                        }
+                        alert(message);
+                    });
+            }
+
+             function confirmClearAll() {
+                if (confirm('Are you sure you want to clear ALL image entries and tag suggestions? This cannot be undone.')) {
+                   if (confirm('SECOND CONFIRMATION: Really clear everything?')) {
+                        clearAllData();
+                   }
+                }
+            }
+
+            function clearAllData() {
+                 imageData = [];
+                 tagSuggestions = [];
+                 nextId = 1;
+                 const initialMessage = '<p style="grid-column: 1 / -1;">No images loaded yet. Paste URLs above and click "Load Images".</p>';
+                 imageListDiv.innerHTML = initialMessage;
+                 jsonOutputCode.textContent = 'JSON output will appear here...';
+                 copyJsonBtn.disabled = true;
+                 localStorage.removeItem(IMAGE_DATA_LS_KEY);
+                 localStorage.removeItem(TAG_SUGGESTIONS_LS_KEY);
+                 localStorage.removeItem(NEXT_ID_LS_KEY);
+                 console.log('All data cleared.');
+             }
+
+            function processUrls() {
+                const urls = imageUrlsInput.value.trim().split('\n')
+                    .map(url => url.trim())
+                    .filter(url => url !== '' && isValidUrl(url));
+                const uniqueUrls = [...new Set(urls)];
+                let addedNew = false;
+                uniqueUrls.forEach(url => {
+                    if (!imageData.some(item => item.url === url)) {
+                        const newItem = { id: nextId++, url: url, name: '', tags: [], hasError: false };
+                        imageData.push(newItem);
+                        addedNew = true;
+                    }
+                });
+                if (addedNew) {
+                    renderImageList();
+                    saveToLocalStorage();
+                    updateJsonOutput();
+                }
+                imageUrlsInput.value = '';
+            }
+
+            loadFromLocalStorage();
+            renderImageList();
+            updateJsonOutput();
+
+            processUrlsBtn.addEventListener('click', processUrls);
+            addTagBtn.addEventListener('click', addTagSuggestion);
+            generateJsonBtn.addEventListener('click', updateJsonOutput);
+            copyJsonBtn.addEventListener('click', copyFormattedDataToClipboard);
+            clearAllBtn.addEventListener('click', confirmClearAll);
+            newTagInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') { addTagSuggestion(); e.preventDefault(); } });
+            imageListDiv.addEventListener('input', handleImageInputChange);
+            imageListDiv.addEventListener('click', handleSuggestionClick);
+
+        });
+    </script>
+
+</body>
+</html>
